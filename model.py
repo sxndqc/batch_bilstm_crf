@@ -1,9 +1,3 @@
-#! /usr/bin/python3
-# -*- coding: utf-8 -*-
-# Author: Jayeol Chun
-# Date: 10/12/22 17:22
-"""model definitions"""
-
 # Batch_First == True cause LSTM wrong output, should be false to avoid this.
 # https://github.com/pytorch/pytorch/issues/80306
 
@@ -13,36 +7,12 @@ import torch.nn as nn
 from utils import *
 
 def mask(input_ids):
-
-    # src_len, batch, num_tags
-    # masker = torch.zeros(input_ids.size(), dtype = torch.long).to(device)
-    # amask = (masker != input_ids)
-    # print(amask.requires_grad)
-    # return amask # true & false tensor
-
     return (input_ids > 0).float()
 
 class LSTMEncoder(nn.Module):
-    """LSTM automatic feature extractor
-
-    TODO:
-      complete `decode` and `nll_loss` functions
-    """
     def __init__(self, num_vocabs, src_vocabs_list, embed_dim, hidden_dim, num_tags, num_layers, glove_weights,
                  bidirectional=False, cnn = False):
-        """change hyperparameter values in `main.py`
-
-        Args:
-          num_vocabs: number of source (sentence) vocabs
-          embed_dim: embedding dimension
-          hidden_dim: LSTM hidden dimension
-          num_tags: number of target (POS tags) vocabs
-          num_layers: number of LSTM layers
-          bidirectional: whether to make LSTM bidirectional
-        """
         super().__init__()
-
-        
         self.src_vocabs_list = src_vocabs_list
         self.using_cnn = cnn
 
@@ -66,11 +36,6 @@ class LSTMEncoder(nn.Module):
         
         if self.using_cnn:
             words = [self.src_vocabs_list[i] for i in original_input_embeds]
-            # padding
-
-            # for word in words:
-            #     if len(word)>18:
-            #         print(word)
             ascii_words = [[float(ord(c)) for c in word[:WORD_MAX_LEN]] + [0 for _ in range(WORD_MAX_LEN - len(word))] for word in words]
         
             ascii_words = torch.tensor(ascii_words, requires_grad = False).view(len(words), 1, WORD_MAX_LEN)
@@ -85,15 +50,10 @@ class LSTMEncoder(nn.Module):
         del lstm_input
         
         lstm_output, batch_sizes_2, sorted_indices_2, unsorted_indices_2 = lstm_hidden
-
-        # print("lstm_output: ", lstm_output.shape)
-        
         assert (batch_sizes == batch_sizes_2).all()
         assert (sorted_indices == sorted_indices_2).all()
         assert (unsorted_indices == unsorted_indices_2).all()
-
-        # lstm output is a flattened output of each lstm unit. They should be treated with the Linear layer.
-
+        
         lstm_output = self.linear(lstm_output)
 
         emission = PackedSequence(lstm_output, batch_sizes, sorted_indices, unsorted_indices)
@@ -117,9 +77,6 @@ class LSTMEncoder(nn.Module):
     def nll_loss(self, packed_input_ids, flattened_labels):
 
         emission, batch_sizes, sorted_indices, unsorted_indices = self(packed_input_ids)
-
-
-        # outputs is a 2-d tensor, now become a softmax
         outputs = - torch.log_softmax(emission, dim = 1)
 
         num_tokens = outputs.size(0)
@@ -131,18 +88,7 @@ class LSTMEncoder(nn.Module):
 
 
 class LSTMCRF(nn.Module):
-    """LSTM-CRF sequential tagger (with Viterbi decoding)
 
-    remember that CRF computes conditional probability, aka posterior from PA1
-
-    here need to keep track of 2 scores: (1) emission (2) transition
-    (1) emission scores are given by `LSTMEncoder`
-    (2) transition scores are defined by `self.transitions`, where `t_ij` means
-      transition score from tag `j` to tag `i`
-
-    TODO:
-      complete `forward`, `decode`, `score` and `nll_loss` functions
-    """
     def __init__(self, src_vocabs, src_vocabs_list, tgt_vocabs, embed_dim, hidden_dim, num_layers, glove_weights,
                  transition_initial, bidirectional=False, cnn = False):
         """see `LSTMEncoder` above for description of arguments"""
@@ -171,23 +117,7 @@ class LSTMCRF(nn.Module):
 
 
     def forward(self, emission, emission_length):
-        """TODO: implement forward algorithm and compute the partition function
-
-        Args:
-          emission: output of `LSTMEncoder`, (src_len, num_tags)
-
-        Returns:
-          alpha, the forward variable
-        """
-
-        # yes, every step in the forward need to compute log_sum_exp, 
-        # because this ensure that the exp sum doesn't get messed, 
-        # and the adding to log actually convert to the index of e, 
-        # and subsequently convert to another addition on the total path
-
-        # alpha = batch * tag
-        # emission = batch * labels * tag
-
+        
         this_batch = emission.size(0)
         max_length = emission.size(1)
         assert emission.size(2) == self.num_tags
@@ -211,7 +141,6 @@ class LSTMCRF(nn.Module):
         real_alphas = [] # batch * 1
 
         for i, l in enumerate(emission_length):
-            # print(i, l)
 
             real_alphas.append(torch.logsumexp(alphas[int(l)-1][i] + self.transitions[self.tgt_vocabs[EOS], :], dim = 0)) # sum up at the real terminal position
 
@@ -228,10 +157,6 @@ class LSTMCRF(nn.Module):
         this_batch = emission.size(0)
         max_length = emission.size(1)
         assert emission.size(2) == self.num_tags
-        
-        # it is better to unpack emission and make it a 3-d cube, other wise it still needs unpacking and aligning
-
-        # the_batch, largest_label_this_batch, self.num_tags = emission.shape
 
         s = torch.full((this_batch, self.num_tags), -10000.)
         s[:, self.tgt_vocabs[BOS]] = 0.
