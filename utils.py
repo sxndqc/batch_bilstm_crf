@@ -1,8 +1,3 @@
-#! /usr/bin/python3
-# -*- coding: utf-8 -*-
-# Author: Jayeol Chun
-# Date: 10/12/22 18:16
-"""helper functions"""
 import os
 import random
 import time
@@ -57,12 +52,7 @@ TEST_SNT = '../data/test/ptb_23.snt'
 PRED_TAGGED = 'preds.tagged'
 
 def display_exec_time(begin: float, msg_prefix: str = ""):
-    """displays the script's execution time
 
-    Args:
-      begin (float): time stamp for beginning of execution
-      msg_prefix (str): display message prefix
-    """
     exec_time = time.time() - begin
 
     msg_header = f'{msg_prefix} finished: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} Execution Time:'
@@ -86,14 +76,7 @@ def get_unique_fpath(fdir, fname):
 
 
 def export_preds(snts, preds, output_fname):
-    """you are asked to submit your model's predictions on test dataset; the format
-    of the export should resemble `.tagged` data, which this function accomplishes
 
-    Args:
-      snts:
-      preds: model predictions
-      output_fname: output filename
-    """
     output_fpath = get_unique_fpath('.', output_fname)
 
     print(f"Exporting predictions at {output_fpath}")
@@ -106,13 +89,7 @@ def export_preds(snts, preds, output_fname):
 
 
 def collect_vocabs(training_data):
-    """collects source (sentence) and target (POS tags) vocabs
 
-    `tgt_vocabs_inv` is the inverse of `tgt_vocabs` and is useful for converting
-    model predictions (which are originally ints) back to strings
-
-    we collect `src_vocabs` quite naively here; how can we do better? - English, punctuations, numbers
-    """
     print("Collecting vocabs")
     src_vocabs_list, tgt_vocabs_list = set(), set()
     for toks, tags in tqdm.tqdm(training_data):
@@ -153,18 +130,7 @@ def collect_vocabs(training_data):
     return src_vocabs_list, src_vocabs, tgt_vocabs, tgt_vocabs_inv, torch.stack(vocab_to_vec)
 
 def vectorize(data, src_vocabs, tgt_vocabs=None, training = False):
-    """converts strings into indices using `src_vocabs` and `tgt_vocabs` if tags are available
 
-    note that tags are first prefixed with <bos>; this is setting up for CRF
-
-    Args:
-      data: raw string data  -- data.append((toks_list, tags_list))
-      src_vocabs: sentence (source) vocabs
-      tgt_vocabs: POS tags (target) vocabs
-
-    Returns:
-      tensorized data
-    """
     has_tags = tgt_vocabs is not None
 
     out = []
@@ -220,17 +186,7 @@ def vectorize(data, src_vocabs, tgt_vocabs=None, training = False):
 
 
 def read_in_gold_data(fpath, max_num_data=-1):
-    """gold data's filename ends with `.tagged` and consists of tokenized sentences where each token
-    is a tuple of (word, POS tag)
 
-    here we will separate words from POS tags
-
-    Args:
-      max_num_data: max number of data to load, useful during debugging
-
-    Returns:
-        list of tuples of words and POS tags, each of which in turn is a list
-    """
     assert fpath.endswith('tagged')
 
     with open(fpath) as f:
@@ -253,11 +209,7 @@ def read_in_gold_data(fpath, max_num_data=-1):
 
 
 def read_in_plain_data(fpath):
-    """plain data's filename ends with `.snt` and consists of tokenized sentences
 
-    Returns:
-        list of snts, each of which is a list of tokens
-    """
     assert fpath.endswith('snt')
 
     with open(fpath) as f:
